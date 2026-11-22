@@ -12,6 +12,7 @@ import { verifyPayment as verifyMp } from './payments/mercadopago.js';
 import { findPayment, payFromDemoWallet } from './payments/stellar.js';
 import { verifySession as verifyStripe } from './payments/stripe.js';
 import { rates } from './fx.js';
+import { seed } from './seed.js';
 import { broadcasts, orders, users } from './store.js';
 
 const app = express();
@@ -176,6 +177,11 @@ app.get('/api/admin/summary', async (req, res) => {
     orders: all.slice(0, 50),
     broadcasts: broadcasts.all().slice(0, 10),
   });
+});
+
+app.post('/api/admin/seed', async (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: 'token' });
+  res.json({ created: await seed() });
 });
 
 app.post('/api/admin/broadcast', async (req, res) => {

@@ -49,6 +49,15 @@ Cada medio de pago funciona sin claves: el link lleva a una página propia con e
 4. En *Sandbox settings*, "When a message comes in": `PUBLIC_URL/webhooks/twilio` (POST).
 5. Cargá `TWILIO_ACCOUNT_SID` y `TWILIO_AUTH_TOKEN` en `.env` y reiniciá.
 
+## Guion de la demo (2 minutos, todo en una compu)
+
+1. Abrí http://localhost:3010/admin.html?token=jujuy y tocá **Cargar ventas de ejemplo** (quedan marcadas como demo).
+2. En otra pestaña, http://localhost:3010/sim.html con el turista 🇧🇷: escribí `2` (excursiones), `1` (Hornocal), `2` (personas), `4` (PIX). Tocá el link: el checkout se abre encima del chat; pagá y el ticket con QR aparece solo. Respondé `SIM` a la agenda.
+3. Cambiá al turista 🇺🇸 y repetí pagando con `3` (USDC): en el checkout tocá **Pagar con la billetera de prueba (testnet)**. Es una transacción real en Stellar testnet, con link al explorador.
+4. Volvé al panel: aparecen las ventas nuevas por moneda. Mandá una agenda patrocinada y mostrá que llega al chat del turista suscripto.
+
+Para tener USDC real en testnet, corré una vez `npm run stellar:setup` (crea las cuentas y las guarda en `.env`).
+
 ## Estructura (para repartir el trabajo)
 
 ```

@@ -27,6 +27,7 @@ button{padding:10px 16px;border:0;border-radius:10px;background:var(--accent);co
   <div class="wiphala"></div>
   <h1>Jujuy Pay · Panel de operadores</h1>
   <div class="muted" id="status">Cargando…</div>
+  <p style="margin-top:12px"><button id="seed" type="button">Cargar ventas de ejemplo</button> <span class="muted" id="seeded"></span></p>
 
   <div class="grid">
     <div class="card"><div class="muted">Ventas cobradas</div><div class="kpi" id="k-count">0</div></div>
@@ -54,17 +55,25 @@ button{padding:10px 16px;border:0;border-radius:10px;background:var(--accent);co
   </div>
 </main>
 <script>
-let token = '';
-try { token = localStorage.getItem('jp-admin') || ''; } catch {}
-if (!token) token = prompt('Clave del panel (ADMIN_TOKEN)') || '';
-try { localStorage.setItem('jp-admin', token); } catch {}
+// Clave: ?token=... en la URL, o la guardada en este navegador, o se pide en un campo (sin prompt()).
+let token = new URLSearchParams(location.search).get('token') || '';
+try { token = token || localStorage.getItem('jp-admin') || ''; } catch {}
 const H = { 'x-admin-token': token, 'Content-Type': 'application/json' };
+function askToken() {
+  document.getElementById('status').innerHTML =
+    '<form id="tk" style="display:flex;gap:8px;max-width:420px"><input id="tkv" type="password" placeholder="Clave del panel (ADMIN_TOKEN)" style="margin:0"><button>Entrar</button></form>';
+  document.getElementById('tk').onsubmit = (e) => {
+    e.preventDefault();
+    try { localStorage.setItem('jp-admin', document.getElementById('tkv').value); } catch {}
+    location.href = location.pathname;
+  };
+}
 const money = (n, c) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: c, maximumFractionDigits: c === 'ARS' || c === 'CLP' ? 0 : 2 }).format(n);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const label = { mp: 'Mercado Pago', stripe: 'Tarjeta', stellar: 'USDC Stellar', pix: 'PIX' };
 async function load() {
   const r = await fetch('/api/admin/summary', { headers: H });
-  if (r.status === 401) { document.getElementById('status').textContent = 'Clave incorrecta. Recargá la página.'; try { localStorage.removeItem('jp-admin'); } catch {} return; }
+  if (r.status === 401) { try { localStorage.removeItem('jp-admin'); } catch {} clearInterval(timer); askToken(); return; }
   const d = await r.json();
   const modes = Object.entries(d.live).map(([k, v]) => `${k}: ${v ? 'real' : 'demo'}`).join(' · ');
   document.getElementById('status').textContent = `1 USD = ${money(d.rate.arsPerUsd, 'ARS')} (${d.rate.source}) · ${modes}`;
@@ -83,8 +92,14 @@ document.getElementById('send').onclick = async () => {
   document.getElementById('sent').textContent = r.ok ? `Enviado a ${j.sent} suscriptos` : 'Error: ' + (j.error || r.status);
   load();
 };
+document.getElementById('seed').onclick = async () => {
+  const r = await fetch('/api/admin/seed', { method: 'POST', headers: H });
+  const j = await r.json();
+  document.getElementById('seeded').textContent = r.ok ? `${j.created} ventas de ejemplo (marcadas como demo)` : 'Error';
+  load();
+};
+const timer = setInterval(load, 5000);
 load();
-setInterval(load, 5000);
 </script>
 </body>
 </html>

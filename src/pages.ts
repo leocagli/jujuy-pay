@@ -5,7 +5,7 @@ import { config, live } from './config.js';
 import { fmt } from './fx.js';
 import { methodLabel } from './payments/index.js';
 import { canPayFromDemoWallet, explorerTx, sep7Uri } from './payments/stellar.js';
-import type { Order } from './store.js';
+import { users, type Order } from './store.js';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
@@ -61,10 +61,29 @@ ${canPayFromDemoWallet() ? `<form method="post" action="/pay/${o.id}/stellar-dem
 <p class="muted">Escaneie o QR no app do seu banco. <b>Demo:</b> este QR não é um PIX real.</p>
 <img class="qr" src="${qr}" alt="QR PIX demo">${simulate}</div>`;
   } else {
-    body = `<div class="card"><h1>${esc(methodLabel[o.method])}</h1>
-<p class="muted">Falta la clave del proveedor, así que este pago es simulado.</p>${simulate}</div>`;
+    body = mockCardForm(o);
   }
   return layout(`Pagar ${o.id}`, summary(o) + body);
+}
+
+// Checkout simulado de tarjeta (Mercado Pago o tarjeta del exterior) cuando no hay claves del proveedor.
+// Datos de prueba precargados; no se cobra nada.
+function mockCardForm(o: Order) {
+  const lang = users.get(o.userId)?.lang ?? 'es';
+  const L = {
+    es: { title: 'Pagá con tarjeta', demo: 'pago de prueba, no se cobra nada', name: 'Nombre en la tarjeta', num: 'Número de tarjeta', exp: 'Vencimiento', pay: 'Pagar' },
+    en: { title: 'Pay by card', demo: 'test payment, nothing is charged', name: 'Name on card', num: 'Card number', exp: 'Expiry', pay: 'Pay' },
+    pt: { title: 'Pague com cartão', demo: 'pagamento de teste, nada é cobrado', name: 'Nome no cartão', num: 'Número do cartão', exp: 'Validade', pay: 'Pagar' },
+  }[lang];
+  const field = (label: string, value: string) =>
+    `<label class="muted" style="display:block;margin-top:12px;flex:1">${label}<input value="${value}" style="display:block;width:100%;margin-top:4px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit"></label>`;
+  return `<div class="card"><h1>${L.title}</h1>
+<p class="muted">${esc(methodLabel[o.method])} · <b>${L.demo}</b></p>
+<form method="post" action="/pay/${o.id}/simulate">
+${field(L.name, 'Alex Traveler')}
+${field(L.num, '4242 4242 4242 4242')}
+<div style="display:flex;gap:12px">${field(L.exp, '12/29')}${field('CVC', '123')}</div>
+<button>${L.pay} ${fmt(o.amount, o.currency, lang)}</button></form></div>`;
 }
 
 export function donePage(o: Order) {
