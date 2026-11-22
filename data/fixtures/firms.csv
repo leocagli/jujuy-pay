@@ -1,0 +1,4 @@
+latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,confidence,version,bright_ti5,frp,daynight
+-23.7549,-65.4640,325.4,0.4,0.5,2026-11-22,1430,NOAA-20,h,2.0NRT,290.1,12.5,D
+-23.5785,-65.3948,342.8,0.4,0.5,2026-11-22,1445,SUOMI NPP,h,2.0NRT,305.6,18.2,D
+-22.0100,-64.0200,318.2,0.4,0.5,2026-11-22,1500,NOAA-20,n,2.0NRT,280.3,7.1,D
