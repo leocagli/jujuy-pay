@@ -21,6 +21,8 @@ export const config = {
     network: env('STELLAR_NETWORK', 'testnet'),
     merchant: env('STELLAR_MERCHANT_ADDRESS'),
     usdcIssuer: env('STELLAR_USDC_ISSUER', 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'),
+    // Billetera de turista de prueba (solo testnet) para pagar en vivo durante la demo
+    demoTouristSecret: env('STELLAR_DEMO_TOURIST_SECRET'),
     get horizon() {
       return this.network === 'public' ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
     },

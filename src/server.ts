@@ -9,7 +9,7 @@ import { broadcast } from './newsletter.js';
 import { markPaid } from './orders.js';
 import { checkoutPage, donePage, pendingPage, ticketPage, ticketPng } from './pages.js';
 import { verifyPayment as verifyMp } from './payments/mercadopago.js';
-import { findPayment } from './payments/stellar.js';
+import { findPayment, payFromDemoWallet } from './payments/stellar.js';
 import { verifySession as verifyStripe } from './payments/stripe.js';
 import { rates } from './fx.js';
 import { broadcasts, orders, users } from './store.js';
@@ -111,6 +111,23 @@ app.post('/pay/:id/check', async (req, res) => {
   if (o.method === 'stellar' && o.status === 'pending') {
     const hash = await findPayment(o);
     if (hash) await markPaid(o.id, hash);
+  }
+  res.redirect(`/pay/${o.id}`);
+});
+
+// Demo en testnet: paga desde la billetera de turista de prueba. La confirmación sale de Horizon,
+// igual que con cualquier wallet: no marcamos la orden pagada sin ver la transacción en la red.
+app.post('/pay/:id/stellar-demo', async (req, res) => {
+  const o = orders.get(req.params.id);
+  if (!o) return res.status(404).send('Orden no encontrada');
+  if (o.method !== 'stellar' || o.status !== 'pending') return res.redirect(`/pay/${o.id}`);
+  try {
+    await payFromDemoWallet(o);
+    const hash = await findPayment(o);
+    if (hash) await markPaid(o.id, hash);
+  } catch (e: any) {
+    console.error('[stellar demo]', e?.response?.data?.extras?.result_codes ?? e?.message);
+    return res.status(502).send('No se pudo pagar desde la billetera de prueba. Revisá el log del servidor.');
   }
   res.redirect(`/pay/${o.id}`);
 });

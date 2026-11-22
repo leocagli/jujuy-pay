@@ -24,7 +24,7 @@ export async function rates() {
     const mep = await getJson('https://dolarapi.com/v1/dolares/bolsa');
     if (Number(mep.venta) > 0) {
       arsPerUsd = Number(mep.venta);
-      sources.push('dólar MEP (dolarapi.com)');
+      sources.push('dólar MEP, dolarapi.com');
     }
   } catch {
     ok = false;

@@ -4,7 +4,7 @@ import { createHmac } from 'node:crypto';
 import { config, live } from './config.js';
 import { fmt } from './fx.js';
 import { methodLabel } from './payments/index.js';
-import { sep7Uri } from './payments/stellar.js';
+import { canPayFromDemoWallet, explorerTx, sep7Uri } from './payments/stellar.js';
 import type { Order } from './store.js';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -49,6 +49,7 @@ export async function checkoutPage(o: Order) {
 <p class="muted">O enviá <b>${o.amount.toFixed(2)} USDC</b> a<br><code>${esc(config.stellar.merchant)}</code><br>con memo <code>${esc(o.id)}</code></p>
 <a class="btn secondary" href="${esc(uri)}">Abrir en mi wallet</a>
 <form method="post" action="/pay/${o.id}/check"><button>Ya pagué, verificar</button></form>
+${canPayFromDemoWallet() ? `<form method="post" action="/pay/${o.id}/stellar-demo"><button class="btn secondary">Pagar con la billetera de prueba (testnet)</button></form>` : ''}
 <p class="muted">La página se actualiza sola cuando llega el pago.</p></div>
 <script>setInterval(async()=>{const r=await fetch('/api/orders/${o.id}');const j=await r.json();if(j.status==='paid')location.reload()},5000)</script>`;
     } else {
@@ -71,6 +72,7 @@ export function donePage(o: Order) {
     `Pago confirmado ${o.id}`,
     `${summary(o)}<div class="card"><p class="ok">✅ Pago confirmado</p>
 <p>Te mandamos el ticket por WhatsApp. Ya podés volver al chat.</p>
+${o.method === 'stellar' && o.providerRef && /^[0-9a-f]{64}$/.test(o.providerRef) ? `<p class="muted">Transacción en Stellar: <a href="${explorerTx(o.providerRef)}" target="_blank" rel="noopener">${o.providerRef.slice(0, 12)}…</a></p>` : ''}
 <a class="btn" href="/ticket/${o.id}">Ver ticket</a></div>`,
   );
 }
