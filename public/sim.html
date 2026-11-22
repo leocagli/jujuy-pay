@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jujuy Pay · Simulador</title>
+<style>
+:root{--bg:#efeae2;--top:#075e54;--me:#d9fdd3;--bot:#fff;--ink:#111b21;--muted:#667781;--page:#d1cbc3}
+@media (prefers-color-scheme:dark){:root{--bg:#0b141a;--top:#1f2c34;--me:#005c4b;--bot:#202c33;--ink:#e9edef;--muted:#8696a0;--page:#111}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);display:flex;justify-content:center;min-height:100vh}
+.phone{width:100%;max-width:420px;height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+header{background:var(--top);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px}
+header .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#e11d48,#f97316,#facc15,#16a34a,#2563eb,#7c3aed);display:grid;place-items:center;font-weight:700}
+header .name{font-weight:600}header .sub{font-size:12px;opacity:.8}
+header select{margin-left:auto;border-radius:8px;border:0;padding:4px 6px;font-size:13px}
+#log{flex:1;overflow-y:auto;padding:12px 10px}
+.msg{max-width:85%;margin:4px 0;padding:7px 10px;border-radius:8px;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px .5px rgba(0,0,0,.13)}
+.bot{background:var(--bot);border-top-left-radius:0}
+.me{background:var(--me);margin-left:auto;border-top-right-radius:0}
+.msg img{display:block;max-width:220px;border-radius:6px;margin-bottom:6px;background:#fff}
+.msg a{color:#027eb5;word-break:break-all}
+.quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 10px 6px}
+.quick button{border:0;border-radius:16px;padding:6px 12px;background:var(--bot);color:var(--ink);cursor:pointer;font-size:14px}
+form{display:flex;gap:8px;padding:8px 10px;background:var(--bg)}
+input{flex:1;border:0;border-radius:20px;padding:10px 14px;font-size:15px;background:var(--bot);color:var(--ink)}
+form button{border:0;border-radius:50%;width:44px;height:44px;background:#00a884;color:#fff;font-size:18px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="avatar">JP</div>
+    <div><div class="name">Jujuy Pay</div><div class="sub">Simulador de WhatsApp</div></div>
+    <select id="who" aria-label="Turista">
+      <option value="+5493885550101">🇦🇷 Turista argentino</option>
+      <option value="+5511955550102">🇧🇷 Turista brasileño</option>
+      <option value="+12025550103">🇺🇸 Turista de EE.UU.</option>
+      <option value="+56955550104">🇨🇱 Turista chileno</option>
+      <option value="+34655550105">🇪🇸 Turista español</option>
+    </select>
+  </header>
+  <div id="log"></div>
+  <div class="quick" id="quick"></div>
+  <form id="f"><input id="t" autocomplete="off" placeholder="Mensaje"><button aria-label="Enviar">➤</button></form>
+</div>
+<script>
+const log = document.getElementById('log'), input = document.getElementById('t'), who = document.getElementById('who');
+const quick = document.getElementById('quick');
+let es;
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+function fmt(s) {
+  return esc(s)
+    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*([^*\n]+)\*/g, '<b>$1</b>')
+    .replace(/(^|\s)_([^_\n]+)_/g, '$1<i>$2</i>');
+}
+function add(cls, text, media) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.innerHTML = (media ? `<img src="${media.replace(/^https?:\/\/[^/]+/, '')}" alt="ticket">` : '') + fmt(text);
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  if (cls === 'bot') setQuick(text);
+}
+function setQuick(text) {
+  const opts = [...text.matchAll(/(\d)️⃣/g)].map((m) => m[1]);
+  const extra = /SI\*|YES\*|SIM\*/.test(text) ? ['SI', 'NO'] : [];
+  const btns = [...new Set(opts), ...extra, 'MENU'];
+  quick.innerHTML = btns.map((b) => `<button type="button">${b}</button>`).join('');
+  quick.querySelectorAll('button').forEach((b) => (b.onclick = () => sendText(b.textContent)));
+}
+function connect() {
+  if (es) es.close();
+  log.innerHTML = '';
+  quick.innerHTML = '';
+  es = new EventSource('/sim/stream?phone=' + encodeURIComponent(who.value));
+  es.onmessage = (e) => { const m = JSON.parse(e.data); add('bot', m.text, m.mediaUrl); };
+  setTimeout(() => sendText('hola'), 300);
+}
+async function sendText(text) {
+  if (!text.trim()) return;
+  add('me', text);
+  await fetch('/sim/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: who.value, text }) });
+}
+document.getElementById('f').onsubmit = (e) => { e.preventDefault(); const v = input.value; input.value = ''; sendText(v); };
+who.onchange = connect;
+connect();
+</script>
+</body>
+</html>
