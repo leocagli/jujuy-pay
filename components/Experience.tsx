@@ -9,9 +9,18 @@ import {
   useGLTF,
   useProgress,
 } from "@react-three/drei";
+import { ShaderChunk } from "three";
 import { Hud } from "./Hud";
 
+// three r181+ eliminó este chunk. El suelo proyectado de drei igual lo incluye,
+// y el include que no resuelve tira en cada frame.
+const chunks = ShaderChunk as Record<string, string>;
+if (!chunks.cube_uv_reflection_fragment) {
+  chunks.cube_uv_reflection_fragment = "";
+}
+
 const MODEL_URL = "/models/mesh.glb";
+const DRACO_DECODER = "/draco/";
 
 const SCENES = [
   { id: "sunrise", label: "Amanecer", file: "/hdri/aarfontein_sunrise_2k.hdr" },
@@ -25,7 +34,7 @@ const SCENES = [
  * El grupo interior lo para (Z arriba -> Y arriba) y el exterior alinea el largo con X.
  */
 function Train() {
-  const { scene } = useGLTF(MODEL_URL);
+  const { scene } = useGLTF(MODEL_URL, DRACO_DECODER, true);
   const scale = 14;
   return (
     <group position={[0, 0.216 * scale, 0]} rotation={[0, Math.PI / 2, 0]} scale={scale}>
@@ -36,7 +45,7 @@ function Train() {
   );
 }
 
-useGLTF.preload(MODEL_URL);
+useGLTF.preload(MODEL_URL, DRACO_DECODER, true);
 
 function Loader() {
   const { active, progress } = useProgress();
