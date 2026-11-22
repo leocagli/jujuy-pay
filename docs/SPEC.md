@@ -112,6 +112,78 @@ Reglas iniciales de alerta (los umbrales son una propuesta para calibrar):
 
 Comandos de WhatsApp: `alertas`, `alertas <pueblo>`, `suscribir <pueblo>` y `baja`. Para validar que el POST viene de Twilio se usa su firma HMAC-SHA1 sobre el webhook.
 
+### Contratos concretos (fuente de verdad: `lib/types.ts`)
+
+```ts
+type DataSourceMode = "live" | "fixture";
+type Point = { lat: number; lng: number };
+
+interface TrainState {
+  location: Point;
+  passengers: number;
+  solarKw: number;
+  batteryPct: number;
+  progress: number; // 0..1 sobre la traza
+}
+interface TownOccupancy {
+  town: string;
+  occupancyPct: number;
+  alternativeTown?: string; // pueblo con menor ocupación
+}
+interface TelemetryResponse {
+  train: TrainState;
+  occupancy: TownOccupancy[];
+  updatedAt: string;
+}
+
+interface WeatherHour {
+  time: string; // ISO local de Open-Meteo
+  precipitationMm: number;
+  windKph: number;
+  temperatureC: number;
+}
+interface WeatherResponse {
+  town: string;
+  location: Point;
+  hours: WeatherHour[]; // próximas 6 horas
+  next6hPrecipitationMm: number;
+  source: DataSourceMode;
+  fetchedAt: string;
+}
+
+interface FireHotspot {
+  id: string;
+  location: Point;
+  detectedAt: string; // ISO 8601
+  confidence: string;
+  frp: number | null;
+}
+interface FiresResponse {
+  fires: FireHotspot[];
+  source: DataSourceMode;
+  fetchedAt: string;
+}
+
+interface AlertsResponse {
+  alerts: Alert[]; // critical -> warning -> info
+  generatedAt: string;
+}
+
+interface SubscribeRequest { phone: string; town: string } // E.164 y pueblo de la traza
+interface SubscribeResponse { ok: true; phone: string; town: string }
+interface NotifyRequest { alert: Alert }
+interface NotifyResponse { recipients: number; sent: number; failed: number }
+```
+
+Errores: toda ruta JSON responde `{ "error": string }` con el estado HTTP adecuado (400 entrada inválida, 404 pueblo inexistente, 503 proveedor sin credenciales). El webhook responde TwiML con `Content-Type: text/xml`.
+
+### Decisiones de implementación
+
+- Los suscriptores viven en memoria (`lib/subscribers.ts`): alcanza para la demo local y se descarta al reiniciar; no hay base de datos (fuera de alcance).
+- El repo tiene `cacheComponents: true`: las rutas usan `connection()` para ejecutarse por request y el caché se declara con `use cache`/`cacheLife` (Open-Meteo 10 min, FIRMS 1 h, con tags `weather` y `fires`). Si fallan, se sirven `data/fixtures/open-meteo.json` y `data/fixtures/firms.csv` con `source: "fixture"`.
+- `FIRMS_MAP_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` y el opcional `TWILIO_WEBHOOK_URL` van en `.env.local`. Sin `MAP_KEY` se usa el fixture; sin credenciales de Twilio, `/api/notify` responde 503.
+- La firma del webhook se valida con HMAC-SHA1 sobre la URL pública y los parámetros ordenados; si no está `TWILIO_WEBHOOK_URL`, se usa la URL de la request. La comparación es de tiempo constante.
+
 ## Orden de trabajo y riesgos
 
 El camino crítico es contrato, API con fixtures, front sobre la API y recién después WhatsApp real. Cada paso deja algo demostrable.

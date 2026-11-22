@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc lib/geo.ts lib/types.ts lib/alert-rules.ts lib/twilio.ts lib/subscribers.ts --rootDir lib --outDir .test-build --module commonjs --target es2022 --skipLibCheck && node --test tests/*.test.cjs"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",
